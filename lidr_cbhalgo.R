@@ -17,8 +17,6 @@ library(TreeLS)
 library(pracma)
 library(equate)
 
-par(mfrow=c(1,2))
-
 # # Example on how to read treelas input:
 # treelas = readTLS(paste(filenamewithpath,".las",sep=""))
 
@@ -49,6 +47,10 @@ point_density = function(las, ...){
 luo2018cbh = function(treelas, pr_cutoff=0.3, plotting=FALSE) {
 
   tls = bringToOrigin(treelas)
+  
+  if(plotting == TRUE) {
+    par(mfrow=c(1,2))
+  }
   
   if(plotting == TRUE) {
     x=plot(tls, title=filename,color = "Z", colorPalette="white")
