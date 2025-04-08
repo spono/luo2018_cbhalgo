@@ -17,8 +17,8 @@ library(TreeLS)
 library(pracma)
 library(equate)
 
-# # Example on how to read treelas input:
-# treelas = readTLS(paste(filenamewithpath,".las",sep=""))
+# # Example on how to read las input:
+# las = readTLS(paste(filenamewithpath,".las",sep=""))
 
 ###################################################
 ################UTILITY FUNCTIONS##################
@@ -36,7 +36,7 @@ bringToOrigin = function(las, ...){
 # (although not in all cases exactly)
 # see: https://gis.stackexchange.com/questions/416426/why-do-lidr-and-lastools-report-different-point-densities
 point_density = function(las, ...){
-  d = grid_density(las,2)
+  d = rasterize_density(las,2)
   return(mean(d[d>0]))
 }
 
@@ -44,22 +44,22 @@ point_density = function(las, ...){
 ###############CBH ESTIMATION ALGO#################
 ###################################################
 
-luo2018cbh = function(treelas, pr_cutoff=0.3, plotting=FALSE) {
+luo2018cbh = function(las, pr_cutoff=0.3, plotting=FALSE) {
 
-  tls = bringToOrigin(treelas)
+  tls = bringToOrigin(las)
   
   if(plotting == TRUE) {
     par(mfrow=c(1,2))
   }
   
   if(plotting == TRUE) {
-    x=plot(tls, title=filename,color = "Z", colorPalette="white")
+    x=plot(tls, title="tree", color = "Z", pal="white")
     rgl::title3d("","",'X', 'Y', 'Z', col='white')
     rgl::axes3d(c('x', 'y', 'z'),col='white')
   }
 
   ###################################################
-  ###############UNDERSTORY PART (p. 8)##############
+  ############### UNDERSTORY PART (p. 8)##############
   ###################################################
   
   # slice the tree cloud vertically to slices of height dh
@@ -87,13 +87,14 @@ luo2018cbh = function(treelas, pr_cutoff=0.3, plotting=FALSE) {
   
   # find roots of 2nd derivative curve
   ddzeros = findzeros(pred2ndderiv,0,slice_max,n=(slice_max)/dh)
+  
   # these are critical points of 1st derivative
   d_at_zeros = pred1stderiv(ddzeros)
   
   if(plotting == TRUE) {
     # visualize all critical points and positive parts of 2nd derivative, p. 9 paper
-    plot(hseq,pred2ndderiv(hseq),type = "l", xlab="height (m)",main="Understory: 2nd derivative and critical points.
-         Red/Green: start/end of pos. parts.")
+    plot( hseq, pred2ndderiv(hseq), type = "l", xlab="height (m)",main="Understory: 2nd derivative and critical points.
+          Red/Green: start/end of pos. parts.")
     points(ddzeros, pred2ndderiv(ddzeros), pch=1)
   }
   
@@ -122,7 +123,7 @@ luo2018cbh = function(treelas, pr_cutoff=0.3, plotting=FALSE) {
   slicedensities = numeric(0)
   for (i in 1:length(pos_d2intervals_s)) {
     slice = filter_poi(tls, tls@data$Z > pos_d2intervals_s[i] & tls@data$Z <= pos_d2intervals_e[i])
-    if (length(slice@data$X)>0.0) {
+    if (length(slice@data$X) > 0.0) {
       slicedensities[length(slicedensities)+1] = point_density(slice)
     } else { # except for possible erroneous 0 point intervals
       slicedensities[length(slicedensities)+1] = NA
@@ -134,13 +135,13 @@ luo2018cbh = function(treelas, pr_cutoff=0.3, plotting=FALSE) {
   understory_min = pos_d2intervals_s[which(slicedensities == min(slicedensities,na.rm=TRUE))]
   
   if(plotting == TRUE) {
-    rgl::rgl.points(0,0,understory_min,col='green',size=30)
+    rgl::points3d(0,0,understory_min,col='green',size=30)
   }
   
   withoutunderstory = filter_poi(tls, tls@data$Z > understory_min)
   
   ###################################################
-  ##################CBH PART (p. 9)##################
+  ################## CBH PART (p. 9) ##################
   ###################################################
   
   dh = 0.1 # height interval size (accuracy parameter)
@@ -200,10 +201,10 @@ luo2018cbh = function(treelas, pr_cutoff=0.3, plotting=FALSE) {
   
   if(plotting == TRUE) {
     points(cbh, 0.0, col="red",pch=20)
-    rgl::rgl.points(0,0,cbh,col='red',size=20)
+    rgl::points3d(0, 0, cbh, col='red',size=20)
   }
   
   return(cbh)
 }
 
-# luo2018cbh(treelas,pr_cutoff=0.3,plotting=TRUE)
+# luo2018cbh(las, pr_cutoff=0.3, plotting=TRUE)
